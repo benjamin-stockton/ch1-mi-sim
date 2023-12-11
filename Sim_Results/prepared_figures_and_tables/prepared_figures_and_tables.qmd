@@ -1,0 +1,499 @@
+---
+title: "Angular Multiple Imputation Simulation Results"
+author:
+    - name: Benjamin Stockton
+      email: benjamin.stockton@uconn.edu
+      orcid: 
+      affiliations: 
+          - name: University of Connecticut
+date: today
+number-sections: false
+toc: true
+format:
+    pdf:
+        documentclass: article
+        keep-tex: true
+execute: 
+  # cache: true
+  echo: false
+  warning: false
+bibliography: '../../references.bib'
+fig-height: 5
+fig-width: 8
+editor: source
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(echo = FALSE, 
+                      cache = TRUE, 
+                      fig.height = 6, 
+                      fig.width = 8)
+
+library(circular)
+library(dplyr)
+library(ggplot2)
+library(mvtnorm)
+library(posterior)
+library(bayesplot)
+library(latex2exp)
+color_scheme_set("brightblue")
+
+theme_set(theme_bw())
+
+# source("../../R/analysis_helpers.R")
+source("../../R/linear-reg-sim/generate_data_for_linear_regression.R")
+file.sources = list.files(c("../../R/simulation_results_funcs"), 
+                          pattern="*.R$", full.names=TRUE, 
+                          ignore.case=TRUE)
+invisible(capture.output(sapply(file.sources,source,.GlobalEnv)))
+```
+
+```{r}
+#| label: load-simulation-results
+#| include: false
+
+sim.settings <- read.csv("../Sim_Settings_big.csv", header = T)
+
+sim.settings |>
+   filter(DGP_Name != "Test") -> sim.settings
+
+res <- load_simulation_results(sim.settings, fp_prefix = "../")
+res$beta_0 <- 3
+res$beta_0_true <- 3
+
+res_longer <- create_long_format_results(res)
+
+res_longer |> filter(is.na(MoE), Coef == 'beta_4') |>
+    summarize(
+        NA_count = sum(is.na(MoE))
+    )
+
+smry <- create_full_summary_df(res_longer)
+```
+
+## Example of Poor Fit C-L Regression
+
+```{r}
+#| label: fig-poor-fit-c-l-reg
+#| echo: false
+#| fig-cap: An example of an absent linear relationship between $\theta_i \overset{iid}{\sim} M(0, 25)$ and $X \overset{iid}{\sim} N(0,1)$ where $\theta_i$ and $X_i$ are mutually independent.
+
+theta <- circular::rvonmises(100, circular::circular(0), 25)
+X <- rnorm(100)
+
+fit <- lm(theta ~ X)
+
+plot(X, theta, pch = 16, ylab = latex2exp::TeX("$\\theta$"))
+lines(X, predict(fit))
+```
+
+## Imputation Errors
+
+Here are a few figures showing the distribution of imputation errors. The projected normal regression and PMM with CS consistently provide the imputations with the shortest Euclidean distances to the masked point $(\cos\theta_j, \sin \theta_j)'$ for $j \in \mathcal{M} = \{j : R_j = 0\}.$ von Mises regression consistently gives the worst imputations by this metric, often even worse than the linear regression treating $\theta$ as a linear variable.
+
+```{r}
+#| label: fig-median-imp-error-dgps
+#| fig-cap: "Median imputation errors with N = 100 and 50% missing data across all data generating processes."
+res |>
+    filter(Analysis != "Complete",
+           Analysis != "CCA",
+           reg_relation == "Simple", 
+           N == 100) |>
+    ggplot(aes(Analysis, median_imp_error, fill = Analysis)) +
+        geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) +
+        facet_grid(DGP~., scales = "free_y") +
+        # geom_jitter(width = .05) +
+        scale_color_viridis_c(option = "B")
+```
+
+Focusing on the case with a low concentration symmetric angular distribution with varying smaple szies and fixed $p_{miss} = 0.5$, we find again that projected normal regression provides high quality imputations across sample sizes with less variation in the error distances as the sample size increases. This can be interpreted as the model being increasingly better fit to the data as the sample size increases, the ideal case for any estimator. This is not true for all imputation methods. Predictive mean matching does not see a decrease in imputation error variance as sample size increases. von Mises regression and linear regression on $\theta$ see only a small decrease in their variances as sample size increases.
+
+```{r}
+#| label: fig-median-imp-error-n-violin
+#| fig-cap: "Median imputation errors under the low concentration Projected Normal with 50% of angular data missing."
+res_longer |>
+  filter(Analysis != "CCA",
+          Analysis != "Complete",
+          prop_miss == 0.5,
+          DGP == "PN Low Conc") |>
+  ggplot(aes(Analysis, median_imp_error, fill = as.factor(N))) +
+    # geom_boxplot() +
+    geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) +
+    # geom_point(alpha = 0.1) +
+    facet_grid(reg_relation~DGP, scales = "free") +
+    # facet_grid(Coef ~ DGP) + 
+    theme(axis.text.x = element_text(angle = 45, hjust =1),
+          legend.position = "bottom")
+```
+
+Imputation error slightly increases as the proportion of missing data increases, particularly for the projected normal regression imputations.
+
+```{r}
+#| label: fig-median_imp_error-n-box
+#| fig-cap: "Median imputation errors under the low concentration Projected Normal."
+#| fig-width: 12
+#| fig-height: 4
+
+res_longer |>
+  filter(Analysis != "CCA",
+          Analysis != "Complete",
+          reg_relation == "Complex",
+          DGP == "PN Low Conc") |>
+  ggplot(aes(Analysis, median_imp_error, fill = as.factor(prop_miss))) +
+    geom_boxplot() +
+    # geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) +
+    facet_grid(as.factor(prop_miss)~as.factor(N), scales = "free") +
+    # facet_grid(Coef ~ DGP) + 
+    theme(axis.text.x = element_text(angle = 45, hjust =1),
+          legend.position = "bottom") +
+    coord_cartesian(ylim = c(0, 3))
+
+```
+
+## Confidence Interval Coverages and Widths
+
+In both the simple and complex cases, we find that the projected normal imputations, complete case analysis with list-wise deletion, linear regression on CS, and PMM on CS reach nominal CI coverage for all data generating procedures and regression coefficients. This holds for both the simple regression relationship with the response $Y$ and with the complex relationship with $Y$.
+
+```{r}
+#| label: fig-ci-cov-complex
+#| fig-cap: "95% Confidence interval coverages for the regression coefficients across the different data generating processes with the complex relationship. Sample size and missingness proportion are kept constant at N = 100 and p = 0.5 respectively."
+smry |>
+  filter(Analysis != "Complete",
+          N == 100,
+          M == 50,
+          reg_relation == "Complex") |>
+  ggplot(aes(Analysis, CI_Cov, fill = Analysis)) +
+      geom_col(position = "dodge", color = "black") +
+      facet_grid(Coef ~ DGP, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "bottom") +
+      geom_hline(yintercept = 90, linetype = "dotted", color = "black") +
+      geom_hline(yintercept = 95, linetype = "solid", color = "black") +
+      labs(x = "Analysis", y = "95% CI Coverage", subtitle = "Complex")
+```
+
+```{r}
+#| label: fig-ci-cov-simple
+#| fig-cap: "95% Confidence interval coverages for the regression coefficients across the different data generating processes with the simple relationship. Sample size and missingness proportion are kept constant at N = 100 and p = 0.5 respectively."
+smry |>
+  filter(Analysis != "Simple",
+          N == 100,
+          M == 50,
+          reg_relation == "Complex") |>
+  ggplot(aes(Analysis, CI_Cov, fill = Analysis)) +
+      geom_col(position = "dodge", color = "black") +
+      facet_grid(Coef ~ DGP, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "bottom") +
+      geom_hline(yintercept = 90, linetype = "dotted", color = "black") +
+      geom_hline(yintercept = 95, linetype = "solid", color = "black") +
+      labs(x = "Analysis", y = "95% CI Coverage", subtitle = "Simple")
+```
+
+When we add in the average CI widths to the evaluation of coverages, we find that the projected normal reaches nominal coverage and consistently has a lower average interval width than most other methods. Linear regression on CS provides similarl intervals in terms of width and coverage.
+
+<!-- ```{r} -->
+<!-- #| label: fig-ci-cov-width-simple -->
+<!-- #| fig-cap: "95% Confidence interval coverages and widths for the regression coefficients across the different data generating processes with the simple relationship. Sample size and missingness proportion are kept constant at N = 100 and p = 0.5 respectively. Wider intervals have a lighter shade." -->
+<!-- smry |> -->
+<!--   filter(prop_miss == 0.5, -->
+<!--           N == 100, -->
+<!--           reg_relation == "Simple") |> -->
+<!--   ggplot(aes(x = Analysis, y = CI_Cov, fill = CI_width)) + -->
+<!--       geom_col(position = "dodge", color = "black") + -->
+<!--       scale_fill_viridis_c(option = "D", name = "CI Width") + -->
+<!--       facet_grid(Coef ~ DGP, scales = "free") +  -->
+<!--       theme(axis.text.x = element_text(angle = 45, hjust =1), -->
+<!--             legend.position = "right") + -->
+<!--       geom_hline(yintercept = 90, linetype = "dotted", color = "black") + -->
+<!--       geom_hline(yintercept = 95, linetype = "solid", color = "black") + -->
+<!--       labs(x = "Analysis", y = "95% CI Coverage", subtitle = "Simple") -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- #| label: fig-ci-cov-width-simple-no-pnhc -->
+<!-- #| fig-cap: "95% Confidence interval coverages and widths for the regression coefficients across the different data generating processes with the simple relationship. Sample size and missingness proportion are kept constant at N = 100 and p = 0.5 respectively. Wider intervals have a lighter shade. Results from the PN with high concentration are withheld." -->
+<!-- smry |> -->
+<!--   filter(prop_miss == 0.5, -->
+<!--           N == 100, -->
+<!--           DGP != "PN High Conc", -->
+<!--           reg_relation == "Complex") |> -->
+<!--   ggplot(aes(x = Analysis, y = CI_Cov, fill = CI_width)) + -->
+<!--       geom_col(position = "dodge", color = "black") + -->
+<!--       scale_fill_viridis_c(option = "D", name = "CI Width") + -->
+<!--       facet_grid(Coef ~ DGP, scales = "free") +  -->
+<!--       theme(axis.text.x = element_text(angle = 45, hjust =1), -->
+<!--             legend.position = "right") + -->
+<!--       geom_hline(yintercept = 90, linetype = "dotted", color = "black") + -->
+<!--       geom_hline(yintercept = 95, linetype = "solid", color = "black") + -->
+<!--       labs(x = "Analysis", y = "95% CI Coverage", subtitle = "Complex") -->
+<!-- ``` -->
+
+```{r}
+#| label: fig-ci-cov-width-points
+#| fig-cap: "Each point represents the 95% confidence interval coverage and average interval width for each regression coefficient. The imputation methods are (1) projected normal regression, (2) complete case analysis (list-wise deletion), (3) complete data (no data are missing; ideal), (4) linear regression on CS, (5) linear regression on the angle, (6) PMM on CS, (7) PMM on the angle, and (8) von Mises regression."
+#| fig-height: 8
+
+smry$Analysis <- forcats::fct_relevel(smry$Analysis, 
+                                      "Complete",
+                                      "CCA",
+                                      "bPNReg",
+                                      "vMreg",
+                                      "Norm CS",
+                                      "PMM CS",
+                                      "Norm theta",
+                                      "PMM theta")
+smry |>
+  filter(prop_miss == 0.5,
+          N == 100,
+          DGP != "PN High Conc",
+          reg_relation == "Complex",
+         Analysis != "vMbrms") |>
+  ggplot(aes(CI_width, CI_Cov, color = as.factor(Analysis))) +
+    geom_point(size = 2, alpha = 1) +
+      ggrepel::geom_text_repel(aes(label = ifelse(as.numeric(as.factor(Analysis)) %in% c(1, 3, 4), as.numeric(as.factor(Analysis)), "")),
+                              min.segment.length = 0.5,
+                              # seed = 42, 
+                              # box.padding = 1,
+                              # force = 1, force_pull = 1,
+                              # nudge_x = 0.25,
+                              # direction = "y",
+                              # hjust = 0, 
+                              # segment.size = 0.2,
+                              # color = "black"
+                              ) +
+    facet_grid(Coef ~ DGP, scales = "free") + 
+    theme(axis.text.x = element_text(angle = 45, hjust =1),
+          legend.position = "right") +
+    geom_hline(yintercept = 90, linetype = "dotted", color = "black") +
+    geom_hline(yintercept = 95, linetype = "solid", color = "black") +
+      scale_x_continuous(expand = expansion(mult = 0.5)) +
+      scale_color_manual(values = c(RColorBrewer::brewer.pal(8, "Set2")),
+                         name = "Imputations") +
+    labs(x = "Average CI Width", y = "95% CI Coverage")
+
+ggsave("../../Plots/fig-ci-cov-width-points-lbls-2.pdf",
+       height = 4,
+       width = 7.9,
+       units = "in")
+```
+
+```{r}
+#| label: fig-ci-cov-width-points-lbls
+#| fig-cap: "Each point represents the 95% confidence interval coverage and average interval width for each regression coefficient. Three cases are labeled (1) the ideal case with complete data, (2) projected normal imputation, and (3) von Mises imputation."
+#| fig-height: 6
+smry |>
+  filter(reg_relation == "Complex",
+          N == 100,
+          prop_miss == 0.5,
+          DGP  %in% c("PN Low Conc", "PN Skewed", "PN Bi modal", "PN Reg", "vM Reg", "WN Reg"),
+         Analysis != "vMbrms") |>
+  ggplot(aes(CI_width, CI_Cov, color = as.factor(Analysis))) +
+      geom_point(size = 3, alpha = 1) +
+      ggrepel::geom_text_repel(aes(label = ifelse(as.numeric(as.factor(Analysis)) %in% c(1, 2, 3, 4), Analysis, "")),
+                              min.segment.length = 0.5, 
+                              seed = 42, 
+                              box.padding = 1,
+                              force = 1, force_pull = 1,
+                              # nudge_x = 0.25,
+                              direction = "y",
+                              hjust = 0, 
+                              segment.size = 0.2,
+                              color = "black"
+                              ) +
+      facet_grid(Coef ~ DGP, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "right") +
+      geom_hline(yintercept = 90, linetype = "dotted", color = "black") +
+      geom_hline(yintercept = 95, linetype = "solid", color = "black") +
+      scale_x_continuous(expand = expansion(mult = 0.5)) +
+      scale_color_manual(values = c(RColorBrewer::brewer.pal(8, "Set2")),
+                         name = "Imputations") +
+      # scale_color_viridis_d(option = "D", name = "Analysis") +
+      labs(x = "Average CI Width", y = "95% CI Coverage") +
+      guides(fill = guide_legend(override.aes = aes(label = "")))
+
+ggsave("../../Plots/fig-ci-cov-width-points-lbls-3.pdf",
+       height = 4,
+       width = 7.9,
+       units = "in")
+```
+
+When specifically looking at the von Mises generated data, we find that the von Mises imputations still provides intervals that fail to reach nominal coverage for at least one of the coefficients in each regression relationship. The projected normal is nearly as good the the complete data estimate in each scenario for each coefficient.
+
+```{r}
+#| label: fig-vmreg-dgp-ci-widths
+#| fig-cap: "95% CI widths for the coefficient estimates from anglular data generated by the von Mises regression DGP."
+smry |> 
+  filter(DGP == "vM Reg") |>
+  ggplot(aes(CI_width, CI_Cov, color = Analysis)) +
+      geom_point(size = 3, alpha = .5) +
+      ggrepel::geom_text_repel(aes(label = ifelse(as.numeric(as.factor(Analysis)) %in% c(1, 3, 8, 9), Analysis, "")),
+                              min.segment.length = 0.1, seed = 42, box.padding = 0.25,
+                              force = 0.5, nudge_x = 0.25, direction = "y",
+                              hjust = 0, segment.size = 0.2, color = "black") +
+      facet_grid(Coef ~ reg_relation, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "bottom") +
+      geom_hline(yintercept = 90, linetype = "dotted", color = "black") +
+      geom_hline(yintercept = 95, linetype = "solid", color = "black") +
+      scale_x_continuous(expand = expansion(mult = 0.5)) +
+      scale_color_viridis_d(option = "D", name = "Analysis") +
+      labs(x = "Average CI Width", y = "95% CI Coverage") +
+      guides(fill = guide_legend(override.aes = aes(label = ""))) +
+      coord_cartesian(xlim = c(0.5, 2))
+
+print_mean_mse_table(smry, "vM Reg")
+print_bias_table(smry, "vM Reg")
+```
+
+### By Proportion of Missingness
+
+```{r}
+smry |>
+  filter(DGP == "PN Low Conc",
+          N == 100) |>
+  ggplot(aes(Analysis, CI_Cov, fill = as.factor(prop_miss))) +
+      geom_col(position = "dodge", color = "black") +
+      facet_grid(Coef ~ reg_relation, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "bottom") +
+      geom_hline(yintercept = 90, linetype = "dotted", color = "black") +
+      geom_hline(yintercept = 95, linetype = "solid", color = "black") +
+      labs(x = "Analysis", y = "95% CI Coverage")
+
+smry |>
+  filter(DGP == "PN Low Conc",
+          N == 100) |>
+  ggplot(aes(Analysis, CI_width, fill = as.factor(prop_miss))) +
+      geom_col(position = "dodge", color = "black") +
+      facet_grid(Coef ~ reg_relation, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "bottom") +
+      labs(x = "Analysis", y = "Avg 95% CI Width")
+```
+
+### By Sample Sizes
+
+```{r}
+smry |>
+  filter(DGP == "PN Low Conc",
+          prop_miss == 0.5) |>
+  ggplot(aes(Analysis, CI_Cov, fill = as.factor(N))) +
+      geom_col(position = "dodge", color = "black") +
+      facet_grid(Coef ~ reg_relation, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "bottom") +
+      geom_hline(yintercept = 90, linetype = "dotted", color = "black") +
+      geom_hline(yintercept = 95, linetype = "solid", color = "black") +
+      labs(x = "Analysis", y = "95% CI Coverage")
+
+smry |>
+  filter(DGP == "PN Low Conc",
+          prop_miss == 0.5) |>
+  ggplot(aes(Analysis, CI_width, fill = as.factor(N))) +
+      geom_col(position = "dodge", color = "black") +
+      facet_grid(Coef ~ reg_relation, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "bottom") +
+      labs(x = "Analysis", y = "Avg 95% CI Width")
+```
+
+### CI Width Distributions
+
+```{r}
+# , "PN High Conc", "PN Bi-modal", "PN Skewed"
+
+
+p1 <- res_longer |>
+    filter(DGP == "PN Low Conc",
+           N == 100) |>
+    ggplot(aes(Analysis, CI_UB - CI_LB, fill = as.factor(prop_miss))) + 
+    # geom_hline(yintercept = 95, color = "darkgray", linetype = "dashed") +
+    geom_boxplot() + 
+    scale_color_viridis_c(option = "D", name = "Prop Missing") +
+    scale_fill_viridis_d(option = "D", name = "Prop Missing") +
+    facet_grid(Coef ~ reg_relation, scales = "free") + 
+    theme(axis.text.x = element_text(angle = 45, hjust =1),
+          legend.position = "bottom") + 
+    labs(y = "95% CI Width")
+
+p2 <- res_longer |>
+    filter(DGP == "PN Low Conc",
+           prop_miss == 0.5) |>
+    ggplot(aes(Analysis, CI_UB - CI_LB, fill = as.factor(N))) + 
+    # geom_hline(yintercept = 95, color = "darkgray", linetype = "dashed") +
+    geom_boxplot() + 
+    scale_color_viridis_c(option = "D", name = "Sample Size (N)") +
+    scale_fill_viridis_d(option = "D", name = "Sample Size (N)") +
+    facet_grid(Coef ~ reg_relation, scales = "free") + 
+    theme(axis.text.x = element_text(angle = 45, hjust =1),
+          legend.position = "bottom") + 
+    labs(y = "95% CI Width")
+
+cowplot::plot_grid(p1, p2, nrow = 1, labels = c("a)", "b)"))
+
+```
+
+```{r}
+res_longer |>
+  filter(N == 100,
+          prop_miss == 0.5,
+          reg_relation == "Complex",
+          DGP != "Test") |>
+  ggplot(aes(Analysis, CI_UB - CI_LB, fill = Analysis)) + 
+      # geom_hline(yintercept = 95, color = "darkgray", linetype = "dashed") +
+      geom_boxplot() + 
+      scale_color_viridis_c(option = "D") +
+      scale_fill_viridis_d(option = "D") +
+      facet_grid(Coef ~ DGP, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "bottom") +
+      labs(x = "Analysis", y = "CI Width")
+```
+
+```{r}
+res_longer |>
+  filter(N == 100,
+          prop_miss == 0.5,
+          reg_relation == "Complex",
+          DGP != "PN High Conc") |>
+  ggplot(aes(Analysis, CI_UB - CI_LB, fill = Analysis)) + 
+      # geom_hline(yintercept = 95, color = "darkgray", linetype = "dashed") +
+      geom_boxplot() + 
+      scale_color_viridis_c(option = "D") +
+      scale_fill_viridis_d(option = "D") +
+      facet_grid(Coef ~ DGP, scales = "free") + 
+      theme(axis.text.x = element_text(angle = 45, hjust =1),
+            legend.position = "bottom") +
+      labs(x = "Analysis", y = "CI Width")
+```
+
+## Tables
+
+```{r}
+
+#| label: tbl-pn-lowconc-est-mse
+#| tbl-cap: "The mean estimates and MSE for the regression coefficients with MI where data were generated under the low concentration projected normal DGP ($\\theta  \\sim PN((1,0)', I_2)$). The 'Simple' regression relationship is for $\\beta_1 = \\beta_2 = 0$ while the 'Complex' relationship has $\\beta_j \\neq 0$ for $j = 1,2$."
+
+print_mean_mse_table(smry, "PN Low Conc")
+print_bias_table(smry, "PN Low Conc")
+```
+
+```{r}
+#| label: tbl-pn-highconc-est-mse
+#| tbl-cap: "The mean estimates and MSE for the regression coefficients with MI where data were generated under the high concentration projected normal DGP ($\\theta  \\sim PN((10,0)', I_2)$). The 'Simple' regression relationship is for $\\beta_1 = \\beta_2 = 0$ while the 'Complex' relationship has $\\beta_j \\neq 0$ for $j = 1,2$."
+
+print_mean_mse_table(smry, "PN High Conc")
+print_bias_table(smry, "PN High Conc")
+```
+
+```{r}
+#| label: tbl-pn-reg-est-mse
+#| tbl-cap: "The mean estimates and MSE for the regression coefficients with MI where data were generated under the projected normal regression DGP ($\\theta | X_1, X_2 \\sim PN(\\mu_i, I_2)$). The 'Simple' regression relationship is for $\\beta_1 = \\beta_2 = 0$ while the 'Complex' relationship has $\\beta_j \\neq 0$ for $j = 1,2$."
+
+print_mean_mse_table(smry, "PN Reg", digits = 3)
+print_bias_table(smry, "PN Reg", digits = 3)
+```

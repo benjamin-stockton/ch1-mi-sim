@@ -1,0 +1,711 @@
+---
+title: "PN MI Simulation Results"
+author: "Benjamin Stockton"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, fig.height = 4, fig.width = 6)
+
+
+library(circular)
+library(dplyr)
+library(ggplot2)
+library(mvtnorm)
+library(posterior)
+library(bayesplot)
+library(latex2exp)
+color_scheme_set("brightblue")
+
+theme_set(theme_bw())
+
+file.sources = list.files(c("../R/simulation_results_funcs"), 
+                          pattern="*.R$", full.names=TRUE, 
+                          ignore.case=TRUE)
+sapply(file.sources,source,.GlobalEnv)
+```
+
+
+# Strong Response-Direction Relationship
+
+The true regression relationship is 
+$$Y = \cos\theta + 0.5\sin\theta + \epsilon$$ 
+where $\epsilon \sim N(0, 1)$.
+
+## Projected Normal Angle Variate; $\mu = (10,0)'$
+
+The angular variate is drawn from $PN_2((10,10)', I_2)$. High concentration for the angle.
+
+We start by simulating a data set with a high concentration direction with a mean direction of $\pi/4$, $\theta \sim PN_2((10,10)', I_2)$, and a strictly circular-linear relationship, $\beta = (3, 0,0,1, 0.5)'$ between the response $Y$ and $\theta$. Other covariates have no association with $Y$. 
+
+```{r}
+beta <- c(0,0,-7,6)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_pn_mu_10_0", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.25, theta_reg = FALSE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths(sim_name = "angle_from_pn_mu_10_0", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.25, theta_reg = FALSE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+top_methods <- g$smry_tab$top_method
+top_methods$DGP <- "PN High Conc - Strong Rel"
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+
+## Projected Normal Angle Variate; $\mu = (1,0)'$
+
+The angular variate is drawn from $PN_2((1,0)', I_2)$. Low concentration for the angle. 
+
+Next we consider the angle to drawn from a low concentration distribution with a mean direction of 0, $\theta \sim PN_2((1,0)', I_2)$ and a strictly circular-linear relationship to the response. 
+
+```{r}
+beta <- c(0,0,-7,6)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_pn_mu_1_0", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.5, theta_reg = FALSE,  mu = c(1, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_pn_mu_1_0", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.5, theta_reg = FALSE,  mu = c(1, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "PN Low Conc - Strong Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+## Projected Normal Angle Variate; $\mu = (10, 0)', \Sigma \neq I_2$
+
+The angular variate is drawn from $PN_2((10,0)', \begin{pmatrix}1 & -2 \\ -2 & 10\end{pmatrix})$. Bi-modal projected normal.
+
+
+
+```{r}
+beta <- c(0,0,-7,6)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_bi-modal", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.5, theta_reg = FALSE,  mu = c(10, 0), Sigma = c(1,-2, -2, 10), 
+                                    beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_bi-modal", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.5, theta_reg = FALSE,  mu = c(10, 0), Sigma = c(1,-2, -2, 10), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "PN Bi-Modal - Strong Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+## Projected Normal Regression
+
+```{r}
+beta <- c(0, 0, -7, 6)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_pn_reg/0.5_missing_MAR", fps = list("MAR" = NA),
+                     simQ = 100, M = 10, N = 100, gamma = 0.5, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+
+fig_fps <- fig_file_paths("angle_from_pn_reg/0.5_missing_MAR", simQ = 100, M = 10, N = 100,
+                                    gamma = 0.5, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "PN Reg - Strong Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+## Wrapped Normal Regression
+
+
+```{r}
+beta <- c(0,0,-7,6)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_wn_reg", fps = list("MAR" = NA),
+                     simQ = 100, M = 10, N = 100, gamma = 0.5, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_wn_reg", simQ = 100, M = 10, N = 100,
+                                    gamma = 0.5, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "WN Reg - Strong Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+## von Mises Regression DGP
+
+
+```{r}
+beta <- c(0, 0, -7, 6)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_vm_reg", fps = list("MAR" = NA),
+                     simQ = 100, M = 10, N = 100, gamma = 0.5, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_vm_reg", simQ = 100, M = 10, N = 100,
+                                    gamma = 0.5, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "VM Reg - Strong Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+
+
+# Weak Response-Direction Relationship
+
+The true regression relationship is 
+$$Y = 10 X_1 + 2 X_2 + 0.5\cos\theta + 0\sin\theta + \epsilon$$ 
+where $\epsilon \sim N(0, 1)$. The associations between $X_1, X_2$ and $Y$ now dominate the circular-linear relationship between $\theta$ and $Y$.
+
+## Projected Normal Angle Variate; $\mu = (10,10)'$
+
+The angular variate is drawn from $PN_2((10,10), I_2)$. High concentration for the angle.
+
+
+```{r}
+beta <- c(10, 2, 0.5, 0)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_pn_mu_10_0", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.25, theta_reg = FALSE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths(sim_name = "angle_from_pn_mu_10_0", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.25, theta_reg = FALSE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "PN High Conc - Weak Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+
+## Projected Normal Angle Variate; $\mu = (1,0)'$
+
+The angular variate is drawn from $PN_2((1,0), I_2)$. Low concentration for the angle. 
+
+
+```{r}
+beta <- c(10, 2, 0.5, 0)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_pn_mu_1_0", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.5, theta_reg = FALSE,  mu = c(1, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_pn_mu_1_0", simQ = 500, M = 50, N = 100,
+                                    gamma = 0.5, theta_reg = FALSE,  mu = c(1, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "PN Low Conc - Weak Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+## Projected Normal Angle Variate; $\mu = (10, 0)', \Sigma \neq I_2$
+
+The angular variate is drawn from $PN_2((10,0)', \begin{pmatrix}1 & -2 \\ -2 & 10\end{pmatrix})$. Bi-modal projected normal.
+
+
+```{r}
+beta <- c(10, 2, 0.5, 0)
+alphas <- list("MAR" = c(0,0,0, 0,0,10))
+
+fps <- build_fp_list(fps = alphas, sim_name = "angle_bi-modal", simQ = 100, M = 10, N = 100,
+                     gamma = 0.5, theta_reg = FALSE, mu = c(10, 0), Sigma = c(1,-2, -2, 10), 
+                     beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_bi-modal", simQ = 100, M = 10, N = 100,
+                          gamma = 0.5, theta_reg = FALSE,  mu = c(10, 0), Sigma = c(1,-2, -2, 10), 
+                          beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "PN Bi-Modal - Weak Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+## Projected Normal Regression
+
+```{r}
+beta <- c(10, 2, 0.5, 0)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_pn_reg/0.5_missing_MAR", fps = list("MAR" = NA),
+                     simQ = 100, M = 10, N = 100, gamma = 0.25, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+
+fig_fps <- fig_file_paths("angle_from_pn_reg/0.5_missing_MAR", simQ = 100, M = 10, N = 100,
+                                    gamma = 0.25, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "PN Reg - Weak Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+## Wrapped Normal Regression
+
+
+```{r}
+beta <- c(10, 2, 0.5, 0)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_wn_reg", fps = list("MAR" = NA),
+                     simQ = 100, M = 10, N = 100, gamma = 0.5, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_wn_reg", simQ = 100, M = 10, N = 100,
+                                    gamma = 0.5, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "WN Reg - Weak Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+## von Mises Regression
+
+
+```{r}
+beta <- c(10, 2, 0.5, 0)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_vm_reg", fps = list("MAR" = NA),
+                     simQ = 100, M = 10, N = 100, gamma = 0.5, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_vm_reg", simQ = 100, M = 10, N = 100,
+                                    gamma = 0.5, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "VM Reg - Weak Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+# Other Regression DGPs
+
+## Projected Normal DGP
+
+## Wrapped Normal DGP
+
+```{r}
+beta <- c(5.18, 4.47, -0.44, -1.74)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_wn_reg", fps = list("MAR" = NA),
+                     simQ = 100, M = 50, N = 100, gamma = 0.25, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_wn_reg", simQ = 100, M = 50, N = 100,
+                                    gamma = 0.25, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "WN Reg - Balanced Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+```{r}
+beta <- c(-7.26, -3.97, 2.30, 0.65)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_wn_reg", fps = list("MAR" = NA),
+                     simQ = 100, M = 10, N = 100, gamma = 0.25, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_wn_reg", simQ = 100, M = 10, N = 100,
+                                    gamma = 0.25, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "WN Reg - Moderate-Weak Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+```{r}
+beta <- c(7.29, -2.97, 0.8, 0.02)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_wn_reg", fps = list("MAR" = NA),
+                     simQ = 100, M = 50, N = 100, gamma = 0.25, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_wn_reg", simQ = 100, M = 50, N = 100,
+                                    gamma = 0.25, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "WN Reg - Moderate-Weak Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+
+
+## von Mises DGP
+
+```{r}
+beta <- c(9.22, -5.73, -0.11, 0.36)
+alphas <- list("MAR" = c(0,0,0,0,0,10))
+
+fps <- build_fp_list(sim_name = "angle_from_vm_reg", fps = list("MAR" = NA),
+                     simQ = 100, M = 10, N = 100, gamma = 0.5, theta_reg = TRUE,
+                     mu = c(10, 0), Sigma = c(1, 0, 0, 1), beta = beta, alphas = alphas)
+fig_fps <- fig_file_paths("angle_from_vm_reg", simQ = 100, M = 10, N = 100,
+                                    gamma = 0.5, theta_reg = TRUE,  mu = c(10, 0), Sigma = c(1, 0, 0, 1), 
+                                    beta = beta, alpha = alphas[["MAR"]])
+
+g <- generate_summary(fps, beta)
+g$smry_kbl
+
+tmp <- g$smry_tab$top_method
+tmp$DGP <- "VM Reg - Balanced Rel"
+top_methods <- bind_rows(top_methods, tmp)
+```
+
+```{r, echo=FALSE, out.width="49%", out.height="20%", fig.cap="", fig.show='hold', fig.align='center'}
+
+knitr::include_graphics(c(fig_fps[["imp_by_y"]], fig_fps[["circ_imp"]]))
+```
+
+```{r, fig.height=4, fig.width=6}
+g$ci_plots
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+
+
+# Top Methods
+
+```{r}
+tmp <- top_methods %>% filter(MISSTYPE == "MAR")
+tmp %>%
+    kableExtra::kbl() %>% 
+    kableExtra::kable_styling(full_width = F) %>% 
+    kableExtra::column_spec(2, background = kableExtra::spec_color(
+        ifelse(tmp$Analysis == "bPNReg", 1, 0),
+        begin = 0, end = 0.6, option = "magma"),
+                            color = "white")
+```
+
+
+# New Simulation Results
+
+These simulation results focus on varying the sample sizes and DGP relationships between the covariates, $\theta$ and $Y$.
+
+## Projected Normal Univariate
+
+## Low Concentration
+
+The most in-depth study. This has the widest variation of $N$ and $p_{miss}$.
+
+```{r}
+name_DGP <- "PN Low Conc"
+simQ <- 100
+
+g <- generate_summary2(name_DGP, simQ)
+g$smry_kbl
+```
+
+```{r, fig.height=8, fig.width=8}
+g$est_mse_plt
+g$ci_plts
+```
+
+### Skewed
+
+```{r}
+name_DGP <- "PN Skewed"
+simQ <- 100
+
+g <- generate_summary2(name_DGP, simQ)
+g$smry_kbl
+```
+
+```{r, fig.height=8, fig.width=8}
+g$est_mse_plt
+g$ci_plts
+```
+
+
+## PN Reg
+
+
+```{r}
+name_DGP <- "PN Reg"
+simQ <- 100
+
+g <- generate_summary2(name_DGP, simQ)
+g$smry_kbl
+```
+
+```{r, fig.height=8, fig.width=8}
+g$est_mse_plt
+g$ci_plts
+```
+
+## Wrapped Normal Regression DGP
+
+```{r}
+name_DGP <- "WN Reg"
+simQ <- 250
+
+g <- generate_summary2(name_DGP, simQ)
+g$smry_kbl
+```
+
+```{r, fig.height=8, fig.width=8}
+g$smry_plt
+```
+
+
+
