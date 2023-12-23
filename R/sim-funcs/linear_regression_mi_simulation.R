@@ -11,7 +11,7 @@ calc_median_imp_error <- function(long.imps, theta_masked, M) {
     return(median(inc.dat2$imp_dist))
 }
 
-pn_mi_reg_sim <- function(name_DGP, simQ = 10, N = 100, beta = c(.5, 1, .25, -.25),
+pn_mi_reg_sim <- function(name_DGP, N_sim = 10, N = 100, beta = c(.5, 1, .25, -.25),
                           sigma = 1, Q0 = c(3, .5, 1, .25, -.25), M = 15, p_miss = 0.25,
                           mu_i = c(10,0), sigma_mat = c(1,0,0,1),
                           alpha = c(.5, -2, 0, 0, 0, 0),
@@ -41,7 +41,7 @@ pn_mi_reg_sim <- function(name_DGP, simQ = 10, N = 100, beta = c(.5, 1, .25, -.2
                       "beta_3" = numeric(0),
                       "beta_4" = numeric(0))
     
-    for (q in 1:simQ) {
+    for (q in 1:N_sim) {
         
         # Simulate Data
         sim.dat <- generate_data(name_DGP = name_DGP, N = N, sigma = sigma, beta = beta,

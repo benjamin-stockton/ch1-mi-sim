@@ -9,18 +9,23 @@ create_long_format_results <- function(res) {
         #filter(Analysis != "Norm theta") |>
         group_by(Analysis, DGP, reg_relation, N, M, prop_miss) |>
         mutate(
+            beta_0_par_val = beta_0,
+            beta_1_par_val = beta_1,
+            beta_2_par_val = beta_2,
+            beta_3_par_val = beta_3,
+            beta_4_par_val = beta_4,
             
-            beta_0_est = beta_hat_0,
-            beta_1_est = beta_hat_1,
-            beta_2_est = beta_hat_2,
-            beta_3_est = beta_hat_3,
-            beta_4_est = beta_hat_4,
+            beta_0_estimate = beta_hat_0,
+            beta_1_estimate = beta_hat_1,
+            beta_2_estimate = beta_hat_2,
+            beta_3_estimate = beta_hat_3,
+            beta_4_estimate = beta_hat_4,
             
-            beta_0_MoE = MoE_0,
-            beta_1_MoE = MoE_1,
-            beta_2_MoE = MoE_2,
-            beta_3_MoE = MoE_3,
-            beta_4_MoE = MoE_4,
+            beta_0_moe = MoE_0,
+            beta_1_moe = MoE_1,
+            beta_2_moe = MoE_2,
+            beta_3_moe = MoE_3,
+            beta_4_moe = MoE_4,
             
             beta_0_CI_LB = beta_hat_0 - MoE_0,
             beta_0_CI_UB = beta_hat_0 + MoE_0,
@@ -43,11 +48,11 @@ create_long_format_results <- function(res) {
                 pval, F_stat, starts_with("r_"))) |> 
         tidyr::pivot_longer(
             cols = starts_with("beta_"),
-            names_to = c("Coef", "metric"),
+            names_to = c("term", "metric"),
             names_pattern = "beta_(.)_(.+)"
         ) |> 
         mutate(
-            Coef = paste0("beta_", Coef)
+            term = paste0("beta_", term)
         ) |>
         tidyr::pivot_wider(
             names_from = metric,
@@ -55,8 +60,8 @@ create_long_format_results <- function(res) {
             values_fn = list
         ) |>
         tidyr::unnest_longer(
-            col = c(true, est, MoE, CI_LB, CI_UB)) |>
-        arrange(Coef, Analysis)
+            col = c(par_val, estimate, moe, CI_LB, CI_UB)) |>
+        arrange(term, Analysis)
         
     return(res_longer)
 }

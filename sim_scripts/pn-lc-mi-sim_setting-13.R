@@ -20,10 +20,10 @@ invisible(capture.output(source("R/utils.R")))
 # Data Generation
 ######################################
 
-simQ <- 250
-name_DGP <- "PN High Conc"
+N_sim <- 250
+name_DGP <- "PN Low Conc"
 
-DGP_type <- "PN Low Conc"
+DGP_type <- "PN"
 N <- 50
 sigma <- 0.5
 beta <- c(10, 2, 0.5, 0)
@@ -57,24 +57,19 @@ if (class(te) != 'try-error') {
                   row.names = F)
 }
 set.seed(98672)
-cores <- parallel::detectCores()
-coreQ <- ceiling(simQ / (cores[1] - 5))
-print(paste0("Executing ", coreQ, " iterations on ", cores[1] - 5, " cores."))
 
-cl <- makeCluster(cores[1] - 5)
-registerDoParallel(cl)
-res <- foreach(i = 1:(cores[1] - 5), .combine = rbind) %dopar% {
-    file.sources = list.files(c("R/sim-funcs"),
-                              pattern="*.R$", full.names=TRUE,
-                              ignore.case=TRUE)
-    sapply(file.sources,source,.GlobalEnv)
-    source("R/utils.R")
-    pn_mi_reg_sim(name_DGP = DGP_type, simQ = coreQ, N = N, beta = beta,
+print(paste0("Executing ", N_sim, " iterations across 15 cores."))
+
+x1 <- parallel::mclapply(1:N_sim,
+                   mc.cores = 15,
+                   function(x) {
+    print(x)
+    pn_mi_reg_sim(name_DGP = DGP_type, N_sim = 1, N = N, beta = beta,
                   sigma = sigma, Q0 = c(3,beta), M = M, p_miss = prop_miss,
                   mu_i = mu_i, sigma_mat = sigma_mat,
                   bPN_impute = TRUE, vM_impute = TRUE, alpha = alpha)
-}
-stopCluster(cl)
+})
+res <- x1 |> dplyr::bind_rows()
 
 #################
 res$DGP <- name_DGP
@@ -92,12 +87,12 @@ if (class(te) != 'try-error') {
     print("Directory exists!")
     readr::write_csv(res, 
               paste0(fp, "/", generic_output_path, ".csv"),
-              append = TRUE)
+              append = FALSE)
 } else {
     print("Directory doesn't exist! Writing to Project root.")
     readr::write_csv(res, 
               paste0(generic_output_path, ".csv"),
-              append = TRUE)
+              append = FALSE)
 }
 
 

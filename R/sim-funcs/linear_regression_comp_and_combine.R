@@ -42,7 +42,7 @@ lm_combine <- function(mult_imps, M = 3, Q0 = rep(0, 5)) {
         } else {
             XtX_inv <- diag(k+1)
         }
-        print(det(XtX_inv))
+        # print(det(XtX_inv))
         U <- summary(fit)$sigma^2 * XtX_inv + U # issue inverting this matrix?
     }
     colnames(Q) <- names(coefficients(fit))
