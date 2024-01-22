@@ -101,11 +101,17 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
     # saveRDS(res_sum, file = file.path(out_dir, paste0(f_out, ".rds")))
     readr::write_csv(res_sum, file = file.path(out_dir, paste0(f_out, ".csv")))
     
-    simsum_plots(res_sum, var = "intercept", true_val = 3)
-    simsum_plots(res_sum, var = "X1", true_val = 0)
-    simsum_plots(res_sum, var = "X2", true_val = 0)
-    simsum_plots(res_sum, var = "Xc", true_val = 1)
-    simsum_plots(res_sum, var = "Xs", true_val = 0.5)
+    beta0 <- simsum_plots(res_sum, var = "intercept", true_val = 3)
+    beta1 <- simsum_plots(res_sum, var = "X1", true_val = 0)
+    beta2 <- simsum_plots(res_sum, var = "X2", true_val = 0)
+    beta3 <- simsum_plots(res_sum, var = "Xc", true_val = 1)
+    beta4 <- simsum_plots(res_sum, var = "Xs", true_val = 0.5)
+    
+    return(list(beta0 = beta0,
+                beta1 = beta1,
+                beta2 = beta2,
+                beta3 = beta3,
+                beta4 = beta4))
 }
 
 
@@ -114,8 +120,11 @@ in_dir <- "Sim_Results/vM Reg"
 file_prefix <- "results-mi-sim-setting-"
 file_suffix <- ".csv"
 
-create_res_sum(ll = ll, in_dir = in_dir, file_prefix = file_prefix,
+res <- create_res_sum(ll = ll, in_dir = in_dir, file_prefix = file_prefix,
                           file_suffix = file_suffix)
+
+lapply(res, function(betaj) {betaj$p_grid})
+
 
 # simsum still assumes that the same parameter values are used across the simulation settings ie reg-relations are the same
 

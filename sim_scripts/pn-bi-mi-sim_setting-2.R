@@ -32,7 +32,7 @@ alpha <- c(0,2,1,0,0,5)
 
 M <- 50
 
-mu_i <- c(0.5)
+mu_i <- c(0.5, 0)
 sigma_mat <- c(1, -2, -2, 10)
 prop_miss <- 0.5
 
@@ -58,10 +58,10 @@ if (class(te) != 'try-error') {
 }
 set.seed(98672)
 
-print(paste0("Executing ", N_sim, " iterations across 15 cores."))
+print(paste0("Executing ", N_sim, " iterations across 50 cores."))
 
 x1 <- parallel::mclapply(1:N_sim,
-                   mc.cores = 15,
+                   mc.cores = 50,
                    function(x) {
     print(x)
     pn_mi_reg_sim(name_DGP = DGP_type, N_sim = 1, N = N, beta = beta,

@@ -16,19 +16,19 @@
 
 univar_proj_norm_DGP <- function(N, mu, sigma_mat) {
     sigma_mat <- matrix(sigma_mat, nrow = 2)
-    theta <- circular::rpnorm(N, mu = circular(mu), sigma = sigma_mat)
+    theta <- circular::rpnorm(n = N, mu = circular::circular(mu), sigma = sigma_mat)
     return(theta)
 }
 
 univar_wrap_norm_DGP <- function(N, mu, sigma_circ = 0.1) {
     mu <- atan2(mu[2], mu[1])
-    theta <- circular::rwrappednormal(N, circular(mu), sd = sigma_circ)
+    theta <- circular::rwrappednormal(n = N, mu = circular::circular(mu), sd = sigma_circ)
     return(theta)
 }
 
 univar_vM_DGP <- function(N, mu, kappa = 15) {
     mu <- atan2(mu[2], mu[1])
-    theta <- circular::rvonmises(N, circular(mu), kappa)
+    theta <- circular::rvonmises(n = N, mu = circular::circular(mu), kappa)
     return(theta)
 }
 
@@ -49,7 +49,7 @@ reg_wrap_norm_DGP <- function(N, X, mu, sigma_circ = 0.1) {
     mu <- atan2(mu[2], mu[1])
     for (i in 1:N) {
         mu_i <- (mu + (X[i, ] %*% c(.3,-.3))[1,1]) %% (2*pi)
-        theta[i] <- circular::rwrappednormal(1, circular(mu_i), sd = sigma_circ)
+        theta[i] <- circular::rwrappednormal(n = 1, mu = circular::circular(mu_i), sd = sigma_circ)
     }
     return(theta)
 }
