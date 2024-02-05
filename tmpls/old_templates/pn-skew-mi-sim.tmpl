@@ -32,15 +32,15 @@ alpha <- c(0,2,1,0,0,5)
 
 M <- {{M}}
 
-mu_i <- c(5,0)
-sigma_mat <- c(1, 0, 0, 1)
+mu_i <- c(4,0)
+sigma_mat <- c(5, -2, -2, 1)
 prop_miss <- {{p_miss}}
 
 ########################################
 # Analysis Simulations
 ########################################
 
-fp <- file.path("Sim_Results", "Test")
+fp <- file.path("Sim_Results", name_DGP)
 generic_output_path <- paste0("results-mi-sim-setting-", {{set_n}}, "-reg-rel-", "{{reg_rel}}")
 print(paste0("Output path: ", fp, "/", generic_output_path))
 
@@ -58,10 +58,10 @@ if (class(te) != 'try-error') {
 }
 set.seed(98672)
 
-print(paste0("Executing ", N_sim, " iterations across 15 cores."))
+print(paste0("Executing ", N_sim, " iterations across 50 cores."))
 
 x1 <- parallel::mclapply(1:N_sim,
-                   mc.cores = 15,
+                   mc.cores = 50,
                    function(x) {
     print(x)
     pn_mi_reg_sim(name_DGP = DGP_type, N_sim = 1, N = N, beta = beta,
@@ -69,6 +69,15 @@ x1 <- parallel::mclapply(1:N_sim,
                   mu_i = mu_i, sigma_mat = sigma_mat,
                   bPN_impute = TRUE, vM_impute = TRUE, alpha = alpha)
 })
+
+if (class(te) != 'try-error') {
+    print("Directory exists!")
+    saveRDS(x1, paste0(fp, "/", generic_output_path, ".rds"))
+} else {
+    print("Directory doesn't exist! Writing to Project root.")
+    saveRDS(x1, paste0(generic_output_path, ".rds"))
+}
+
 res <- x1 |> dplyr::bind_rows()
 
 #################
@@ -94,6 +103,7 @@ if (class(te) != 'try-error') {
               paste0(generic_output_path, ".csv"),
               append = FALSE)
 }
+
 
 
 

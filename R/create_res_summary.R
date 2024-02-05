@@ -6,7 +6,6 @@ library(ggplot2)
 library(rsimsum)
 source("R/summary_tables.r")
 
-setting <- readRDS("sim_settings/vm-reg-setting.rds")
 
 simsum_plots <- function(res_sum, var, true_val) {
     s0 <- res_sum[which(res_sum$term == var),]
@@ -115,10 +114,11 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
 }
 
 
-ll <- 1:2
-in_dir <- "Sim_Results/vM Reg"
+in_dir <- "Sim_Results/PN Reg"
 file_prefix <- "results-mi-sim-setting-"
 file_suffix <- ".csv"
+setting <- readRDS("sim_settings/pn-reg-setting.rds")
+ll <- 1:nrow(setting)
 
 res <- create_res_sum(ll = ll, in_dir = in_dir, file_prefix = file_prefix,
                           file_suffix = file_suffix)
@@ -128,4 +128,13 @@ lapply(res, function(betaj) {betaj$p_grid})
 
 # simsum still assumes that the same parameter values are used across the simulation settings ie reg-relations are the same
 
+in_dir <- "Sim_Results/PN Bi modal"
+file_prefix <- "results-mi-sim-setting-"
+file_suffix <- ".csv"
+setting <- readRDS("sim_settings/pn-bi-setting.rds")
+ll <- 1:nrow(setting)
 
+res <- create_res_sum(ll = ll, in_dir = in_dir, file_prefix = file_prefix,
+                      file_suffix = file_suffix)
+
+lapply(res, function(betaj) {betaj$p_grid})

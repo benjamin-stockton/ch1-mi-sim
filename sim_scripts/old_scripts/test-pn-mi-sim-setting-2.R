@@ -20,48 +20,48 @@ invisible(capture.output(source("R/utils.R")))
 # Data Generation
 ######################################
 
-N_sim <- {{N_sim}}
-name_DGP <- "{{name_DGP}}"
+N_sim <- 1
+name_DGP <- "PN High Conc"
 
-DGP_type <- "{{DGP}}"
-N <- {{N_sample}}
+DGP_type <- "PN"
+N <- 100
 sigma <- 0.5
-beta <- c({{beta_1}}, {{beta_2}}, {{beta_3}}, {{beta_4}})
+beta <- c(10, 2, 0.5, 0)
 beta0 <- beta
 alpha <- c(0,2,1,0,0,5)
 
-M <- {{M}}
+M <- 10
 
-mu_i <- c(10,0)
+mu_i <- c(5,0)
 sigma_mat <- c(1, 0, 0, 1)
-prop_miss <- {{p_miss}}
+prop_miss <- 0.1
 
 ########################################
 # Analysis Simulations
 ########################################
 
-fp <- file.path("Sim_Results", name_DGP)
-generic_output_path <- paste0("results-mi-sim-setting-", {{set_n}}, "-reg-rel-", "{{reg_rel}}")
+fp <- file.path("Sim_Results", "Test")
+generic_output_path <- paste0("results-mi-sim-setting-", 2, "-reg-rel-", "complex")
 print(paste0("Output path: ", fp, "/", generic_output_path))
 
 r1 <- data.frame("tmp" = rnorm(1000))
 te <- try(write.csv(r1, 
-                         paste0(fp, "/test_", {{set_n}}, ".csv"),
+                         paste0(fp, "/test_", 2, ".csv"),
                          row.names = F))
 if (class(te) != 'try-error') {
     print("Directory exists!")
 } else {
     print("Directory doesn't exist! Writing to Project root.")
     write.csv(r1, 
-                  paste0(fp, "/test_", {{set_n}}, ".csv"),
+                  paste0(fp, "/test_", 2, ".csv"),
                   row.names = F)
 }
 set.seed(98672)
 
-print(paste0("Executing ", N_sim, " iterations across 50 cores."))
+print(paste0("Executing ", N_sim, " iterations across 15 cores."))
 
 x1 <- parallel::mclapply(1:N_sim,
-                   mc.cores = 50,
+                   mc.cores = 15,
                    function(x) {
     print(x)
     pn_mi_reg_sim(name_DGP = DGP_type, N_sim = 1, N = N, beta = beta,
@@ -69,6 +69,15 @@ x1 <- parallel::mclapply(1:N_sim,
                   mu_i = mu_i, sigma_mat = sigma_mat,
                   bPN_impute = TRUE, vM_impute = TRUE, alpha = alpha)
 })
+
+if (class(te) != 'try-error') {
+    print("Directory exists!")
+    saveRDS(x1, paste0(fp, "/", generic_output_path, ".rds"))
+} else {
+    print("Directory doesn't exist! Writing to Project root.")
+    saveRDS(x1, paste0(generic_output_path, ".rds"))
+}
+
 res <- x1 |> dplyr::bind_rows()
 
 #################
@@ -94,6 +103,7 @@ if (class(te) != 'try-error') {
               paste0(generic_output_path, ".csv"),
               append = FALSE)
 }
+
 
 
 

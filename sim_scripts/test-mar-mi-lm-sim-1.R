@@ -1,0 +1,101 @@
+library(mice, warn.conflicts = F, quietly = T)
+library(imputeangles)
+library(ggplot2)
+library(dplyr)
+
+file_path <- file.path("R")
+source(file.path(file_path, "generate_data.R"))
+source(file.path(file_path, "impose_missing.R"))
+source(file.path(file_path, "impute.R"))
+source(file.path(file_path, "analysis.R"))
+source(file.path(file_path, "utils.R"))
+
+# From command line get the following arguments
+set_n <- 1 # simulation setting id number
+N_sim <- 5 # Number of simulation iterations
+N_sample <- 250 # Sample size
+init_seed <- 987 # Initial seed
+M <- 10 # Number of imputations
+name_DGP <- "PN High Conc"
+pop_pars <- list(
+    mu_0 = c(0,0),
+    B_vec = c(1, 3, 0, -5),
+    Sigma_vec = c(1,0,0,1),
+    kappa = 15,
+    beta_y = c(0, 0, 1, 0.5),
+    sigma_y = 0.5
+) # population parameters to draw samples from
+miss_pars <- list(
+    freq = c(1),
+    mech = "MAR",
+    p_miss = 0.1
+) # Missingness mechanism parameters (also controls MAR/MNAR)
+
+methods <- c("complete", "jav-pmm", "pmm", "jav-norm", "norm",
+            "bpnreg", "vmreg", "pnregid", "vmbrms", "pnreggen")
+
+# seeds <- matrix(NA, nrow = N_sim, ncol = 626)
+set.seed(init_seed * set_n)
+
+# x1 <- parallel::mclapply(1:N_sim,
+# mc.cores = 5,
+x1 <- lapply(1:N_sim,
+function(x) {
+    print(x)
+    
+    # seeds[1,] <- get.seed()
+    sample_data <- generate_data(name_DGP = name_DGP, N = N_sample,
+                                    sigma = pop_pars$sigma_y,
+                                    beta = pop_pars$beta_y, 
+                                    mu = pop_pars$mu_0, 
+                                    sigma_mat = pop_pars$Sigma_vec,
+                                    kappa = pop_pars$kappa)
+    
+    inc_data <- impose_missingness(sample_data, 
+                                freq = miss_pars$freq, 
+                                mech = miss_pars$mech, 
+                                p_miss = miss_pars$p_miss)
+    prop_miss <- apply(as.matrix(inc_data), 2, function(i) {mean(is.na(i))})
+    
+    iter_res <- lapply(methods, function(mtd) {
+        if (mtd == "complete") {
+            res <- lm_analysis(sample_data)
+        }
+        else if (mtd == "cca") {
+            res <- lm_analysis(inc_data)
+        }
+        else {
+            imp_data <- impute(inc_data, l_method = "pmm", c_method = mtd, M = M, maxit = 3)
+            
+            res <- lm_analysis(imp_data)
+        }
+
+        res$par_val <- c(3,pop_pars$beta_y)
+        res$p_miss <- c(0,prop_miss[c("X1", "X2", "U1", "U2")])
+        res$iter <- x
+        res$method <- mtd
+        return(res)
+    })
+    
+    results <- iter_res |> 
+        dplyr::bind_rows()
+
+
+    return(results)
+})
+    
+
+results <- x1 |> dplyr::bind_rows()
+
+out_path <- file.path("sim-results")
+
+saveRDS(x1, file = paste0(out_path, "/sim-results-mar-mi-lm-sim_setting-", set_n, ".rds"))
+
+x2 <- x1 |> 
+    dplyr::bind_rows()
+f_out <- paste0(out_path, "/sim-results-mar-mi-lm-sim_setting-", set_n, ".csv")
+if (file.exists(f_out)) {
+    readr::write_csv(x2, f_out, append = TRUE)
+} else {
+    readr::write_csv(x2, f_out)
+}

@@ -33,6 +33,8 @@ multiply_impute <- function(data_inc, impute_type = "norm", impute_on_angle = T,
     
     method2 <- ifelse(impute_type %in% c("bpnreg", "pnregid", "pnreggen", "vmreg", "vmrbms"),
                       "pmm", impute_type)
+    
+    print(impute_type)
     ini <- mice::mice(data_inc, 
                       maxit = 0, 
                       printFlag = F, 

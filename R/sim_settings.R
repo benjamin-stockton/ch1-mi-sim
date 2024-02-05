@@ -6,13 +6,11 @@ source("R/create_setting_data_frame.R")
 # Test
 ######
 
-test_setting <- create_setting_data_frame(N_sample = c(100),
+(test_setting <- create_setting_data_frame(N_sample = c(250),
                             N_sim = c(5),
                             name_DGP = "PN High Conc",
-                            DGP = "PN",
                            p_miss = c(0.1),
-                           beta = c(c(0, 0, 1, 0.5), 
-                                    c(10, 2, 0.5, 0)))
+                           beta = c(0, 0, 1, 0.5)))
 
 saveRDS(test_setting, 'sim_settings/test-setting.rds')
 

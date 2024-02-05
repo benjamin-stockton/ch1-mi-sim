@@ -10,26 +10,26 @@ setting <- readRDS("sim_settings/test-setting.rds")
 # setting.l <- as.list(setting%>%filter(set_n!=1))
 
 purrr::pwalk(.l = setting,
-             .f = function(N_sample, N_sim, p_miss, M, set_n, DGP, reg_rel, name_DGP, beta_1, beta_2, beta_3, beta_4){
+             .f = function(N_sample, N_sim, p_miss, M, set_n, init_seed, DGP, name_DGP, beta_1, beta_2, beta_3, beta_4){
                  cat(
                      whisker::whisker.render(
-                         readLines('tmpls/test-pn-mi-sim.tmpl'),
+                         readLines('tmpls/mar-mi-lm-sim.tmpl'),
                          data = list(
                              N_sample = N_sample,
                              N_sim = N_sim,
                              M = M,
                              p_miss = p_miss,
                              DGP = DGP,
-                             reg_rel = reg_rel,
                              name_DGP = name_DGP,
                              beta_1 = beta_1,
                              beta_2 = beta_2,
                              beta_3 = beta_3,
                              beta_4 = beta_4,
-                             set_n = set_n)
+                             set_n = set_n,
+                             init_seed = init_seed)
                      ),
                      file = file.path('sim_scripts',
-                                      sprintf("test-pn-mi-sim-setting-%s.R",
+                                      sprintf("test-mar-mi-lm-sim-%s.R",
                                               set_n)
                      ),
                      sep='\n')
@@ -38,8 +38,8 @@ purrr::pwalk(.l = setting,
 source("R/create_bash_scripts.R")
 
 create_bash_scripts("sim_scripts",
-                    script_base_name = "test-pn-mi-sim-setting-%s.R",
-                    sh_name = "test-pn-mi-sim.sh",
+                    script_base_name = "test-mar-mi-lm-sim-%s.R",
+                    sh_name = "test-mar-mi-lm-sim.sh",
                     setting = setting)
 
 ####################################################
