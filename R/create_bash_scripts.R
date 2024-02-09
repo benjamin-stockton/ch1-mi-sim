@@ -1,6 +1,6 @@
-create_bash_scripts <- function(sim_file_path, script_base_name, sh_name, setting) {
+create_bash_scripts <- function(sim_file_path, script_base_name, sh_name, setting, cores = 50) {
     bash_script_content <- 
-    "#!/bin/bash \n#SBATCH --partition=general\n#SBATCH --constraint='epyc128'\n#SBATCH --cpus-per-task=50\n#SBATCH --ntasks=1\n#SBATCH --nodes=1\n#SBATCH --mail-type=ALL\n#SBATCH --mail-user=benjamin.stockton@uconn.edu\ncd .. \n\nsource /etc/profile.d/modules.sh\nmodule purge\nmodule load r/4.3.2\n"
+    paste0("#!/bin/bash \n#SBATCH --partition=general\n#SBATCH --constraint='epyc128'\n#SBATCH --cpus-per-task=", cores, "\n#SBATCH --ntasks=1\n#SBATCH --nodes=1\n#SBATCH --mail-type=ALL\n#SBATCH --mail-user=benjamin.stockton@uconn.edu\ncd .. \n\nsource /etc/profile.d/modules.sh\nmodule purge\nmodule load r/4.3.2\n")
 
     for (i in 1:length(setting$set_n)) {
         sc <- setting$set_n[i]

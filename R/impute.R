@@ -1,4 +1,6 @@
 impute <- function(data, l_method = "pmm", c_method = "pmm", M = 3, maxit = 5) {
+    data <- data |> dplyr::select(theta, U1, U2, X1, X2, Y)
+    
     imp0 <- mice(data, method = l_method, m = 1, maxit = 0)
     
     mthd <- imp0$method
@@ -41,8 +43,7 @@ impute <- function(data, l_method = "pmm", c_method = "pmm", M = 3, maxit = 5) {
     invisible(
         capture.output(
             imp <- mice(data, m = M, method = mthd, predictorMatrix = p_mat,
-                maxit = maxit, printFlag = FALSE,
-                visitSequence = c("theta", "U1", "U2"))
+                maxit = maxit, printFlag = FALSE)
         )
     )
     

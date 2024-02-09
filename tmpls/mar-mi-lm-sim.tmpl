@@ -18,12 +18,12 @@ init_seed <- {{init_seed}} # Initial seed
 M <- {{M}} # Number of imputations
 name_DGP <- "{{name_DGP}}"
 pop_pars <- list(
-    mu_0 = c(0,0),
-    B_vec = c(1, 3, 0, -5),
-    Sigma_vec = c(1,0,0,1),
+    mu_0 = c({{mu_1}}, {{mu_2}}),
+    B_vec = c(-0.15, -0.35, -0.09, -0.40),
+    Sigma_vec = c({{Sigma_11}}, {{Sigma_12}}, {{Sigma_21}}, {{Sigma_22}}),
     kappa = 15,
     beta_y = c({{beta_1}}, {{beta_2}}, {{beta_3}}, {{beta_4}}),
-    sigma_y = 0.5
+    sigma_y = 3.5
 ) # population parameters to draw samples from
 miss_pars <- list(
     freq = c(1),
@@ -37,10 +37,9 @@ methods <- c("complete", "jav-pmm", "pmm", "jav-norm", "norm",
 # seeds <- matrix(NA, nrow = N_sim, ncol = 626)
 set.seed(init_seed * set_n)
 
-# x1 <- parallel::mclapply(1:N_sim,
-# mc.cores = 5,
-x1 <- lapply(1:N_sim,
-function(x) {
+x1 <- parallel::mclapply(1:N_sim,
+                        mc.cores = {{cores}},
+                        function(x) {
     print(x)
     
     # seeds[1,] <- get.seed()
@@ -65,7 +64,7 @@ function(x) {
             res <- lm_analysis(inc_data)
         }
         else {
-            imp_data <- impute(inc_data, l_method = "pmm", c_method = mtd, M = M, maxit = 3)
+            imp_data <- impute(inc_data, l_method = "pmm", c_method = mtd, M = M, maxit = 1)
             
             res <- lm_analysis(imp_data)
         }
@@ -89,11 +88,11 @@ results <- x1 |> dplyr::bind_rows()
 
 out_path <- file.path("sim-results")
 
-saveRDS(x1, file = paste0(out_path, "/sim-results-mar-mi-lm-sim_setting-", set_n, ".rds"))
+saveRDS(x1, file = paste0(out_path, "/", "{{out_prefix}}", "mi-lm-sim_setting-", set_n, ".rds"))
 
 x2 <- x1 |> 
     dplyr::bind_rows()
-f_out <- paste0(out_path, "/sim-results-mar-mi-lm-sim_setting-", set_n, ".csv")
+f_out <- paste0(out_path, "/", "{{out_prefix}}", "mi-lm-sim_setting-", set_n, ".csv")
 if (file.exists(f_out)) {
     readr::write_csv(x2, f_out, append = TRUE)
 } else {

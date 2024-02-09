@@ -11,24 +11,24 @@ source(file.path(file_path, "analysis.R"))
 source(file.path(file_path, "utils.R"))
 
 # From command line get the following arguments
-set_n <- 1 # simulation setting id number
-N_sim <- 5 # Number of simulation iterations
-N_sample <- 250 # Sample size
+set_n <- 7 # simulation setting id number
+N_sim <- 250 # Number of simulation iterations
+N_sample <- 100 # Sample size
 init_seed <- 987 # Initial seed
-M <- 10 # Number of imputations
+M <- 100 # Number of imputations
 name_DGP <- "PN Low Conc"
 pop_pars <- list(
     mu_0 = c(1, 1),
     B_vec = c(-0.15, -0.35, -0.09, -0.40),
     Sigma_vec = c(1, 1, 1, 1),
     kappa = 15,
-    beta_y = c(0, 0, 1, 0.5),
+    beta_y = c(-0.55, 0, -0.2, 0.3),
     sigma_y = 3.5
 ) # population parameters to draw samples from
 miss_pars <- list(
     freq = c(1),
     mech = "MAR",
-    p_miss = 0.1
+    p_miss = 0.9
 ) # Missingness mechanism parameters (also controls MAR/MNAR)
 
 methods <- c("complete", "jav-pmm", "pmm", "jav-norm", "norm",
@@ -38,7 +38,7 @@ methods <- c("complete", "jav-pmm", "pmm", "jav-norm", "norm",
 set.seed(init_seed * set_n)
 
 x1 <- parallel::mclapply(1:N_sim,
-                        mc.cores = 5,
+                        mc.cores = 125,
                         function(x) {
     print(x)
     
@@ -88,11 +88,11 @@ results <- x1 |> dplyr::bind_rows()
 
 out_path <- file.path("sim-results")
 
-saveRDS(x1, file = paste0(out_path, "/", "test-", "mi-lm-sim_setting-", set_n, ".rds"))
+saveRDS(x1, file = paste0(out_path, "/", "mar-pn-lc-", "mi-lm-sim_setting-", set_n, ".rds"))
 
 x2 <- x1 |> 
     dplyr::bind_rows()
-f_out <- paste0(out_path, "/", "test-", "mi-lm-sim_setting-", set_n, ".csv")
+f_out <- paste0(out_path, "/", "mar-pn-lc-", "mi-lm-sim_setting-", set_n, ".csv")
 if (file.exists(f_out)) {
     readr::write_csv(x2, f_out, append = TRUE)
 } else {

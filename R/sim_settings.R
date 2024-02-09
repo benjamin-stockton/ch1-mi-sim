@@ -8,99 +8,45 @@ source("R/create_setting_data_frame.R")
 
 (test_setting <- create_setting_data_frame(N_sample = c(250),
                             N_sim = c(5),
-                            name_DGP = "PN High Conc",
+                            name_DGP = c("PN Low Conc"),
                            p_miss = c(0.1),
                            beta = c(0, 0, 1, 0.5)))
 
 saveRDS(test_setting, 'sim_settings/test-setting.rds')
 
-#####
-# PN Bi-modal
-#####
+################
+# Basic Settings to vary DGP
+################
 
-setting <- create_setting_data_frame(N_sample = c(100),
-                       N_sim = c(250),
-                       DGP = "PN",
-                       name_DGP = "PN Bi modal",
-                       p_miss = c(0.5),
-                       beta = c(c(0, 0, 1, 0.5), c(10, 2, 0.5, 0)))
-
-saveRDS(setting, 'sim_settings/pn-bi-setting.rds')
-
-#####
-# PN High Concentration
-#####
-
-setting <- create_setting_data_frame(N_sample = c(100),
-                                     N_sim = c(250),
-                                     DGP = "PN",
-                                     name_DGP = "PN High Conc",
-                                     p_miss = c(0.5),
-                                     beta = c(c(0, 0, 1, 0.5), c(10, 2, 0.5, 0)))
-
-saveRDS(setting, 'sim_settings/pn-hc-setting.rds')
+(setting <- create_setting_data_frame(N_sample = c(500),
+                                   N_sim = c(250),
+                                   name_DGP = c("PN High Conc", "PN Low Conc", "PN Skewed", "PN Bi modal", "PN Reg", "vM Reg"),
+                                   p_miss = c(0.5),
+                                   beta = c(-0.55, 0, -0.2, 0.3)))
+saveRDS(setting, "sim_settings/dgp-setting.rds")
 
 #####
 # PN Low Concentration
 #####
 
-setting <- create_setting_data_frame(N_sample = c(50, 100, 500, 1000),
+(setting <- create_setting_data_frame(N_sample = c(100, 500, 1000),
                                      N_sim = c(250),
                                      DGP = "PN",
                                      name_DGP = "PN Low Conc",
                                      p_miss = c(0.1, 0.5, 0.9),
-                                     beta = c(c(0, 0, 1, 0.5), c(10, 2, 0.5, 0)))
+                                     beta = c(-0.55, 0, -0.2, 0.3)))
 
 saveRDS(setting, 'sim_settings/pn-lc-setting.rds')
 
 #####
-# PN Skewed
+# PN Regression
 #####
 
-setting <- create_setting_data_frame(N_sample = c(100),
-                                     N_sim = c(250),
-                                     DGP = "PN",
-                                     name_DGP = "PN Skewed",
-                                     p_miss = c(0.5),
-                                     beta = c(c(0, 0, 1, 0.5), c(10, 2, 0.5, 0)))
-
-saveRDS(setting, 'sim_settings/pn-skew-setting.rds')
-
-#####
-# PN Reg
-#####
-
-setting <- create_setting_data_frame(N_sample = c(100),
+(setting <- create_setting_data_frame(N_sample = c(100, 500, 1000),
                                      N_sim = c(250),
                                      DGP = "PNreg",
                                      name_DGP = "PN Reg",
-                                     p_miss = c(0.5),
-                                     beta = c(c(0, 0, 1, 0.5), c(10, 2, 0.5, 0)))
+                                     p_miss = c(0.1, 0.5, 0.9),
+                                     beta = c(-0.55, 0, -0.2, 0.3)))
 
 saveRDS(setting, 'sim_settings/pn-reg-setting.rds')
-
-#####
-# vM Reg
-#####
-
-setting <- create_setting_data_frame(N_sample = c(100),
-                                     N_sim = c(250),
-                                     DGP = "wMreg",
-                                     name_DGP = "vM Reg",
-                                     p_miss = c(0.5),
-                                     beta = c(c(0, 0, 1, 0.5), c(10, 2, 0.5, 0)))
-
-saveRDS(setting, 'sim_settings/vm-reg-setting.rds')
-
-#####
-# WN Reg
-#####
-
-setting <- create_setting_data_frame(N_sample = c(100),
-                                     N_sim = c(250),
-                                     DGP = "WNreg",
-                                     name_DGP = "WN Reg",
-                                     p_miss = c(0.5),
-                                     beta = c(c(0, 0, 1, 0.5), c(10, 2, 0.5, 0)))
-
-saveRDS(setting, 'sim_settings/wn-reg-setting.rds')

@@ -61,9 +61,9 @@ reg_vM_DGP <- function(N, X, mu, kappa) {
     X_cs[,2] <- (X[,2] - mean(X[,2])) / sd(X[,2])
     mu <- atan2(mu[2], mu[1])
     for (i in 1:N) {
-        eta <- X_cs[i,1] * -0.1 + X_cs[i, 2] * 0.5
-        mu_i <- mu + 2 * atan(eta)
-        theta[i] <- circular::rvonmises(1, circular(mu_i), kappa)
+        eta <- X_cs[i,1] * 5.4 + X_cs[i, 2] * 3.5
+        mu_i <- 1.2 + 2 * atan(eta)
+        theta[i] <- circular::rvonmises(1, circular(mu_i), 1)
     }
     return(theta)
 }
