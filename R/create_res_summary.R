@@ -4,13 +4,14 @@ library(ggplot2)
 library(rsimsum)
 source("R/summary_tables.r")
 
+# setting <- readRDS("sim_settings/vm-reg-setting.rds")
 
 simsum_plots <- function(res_sum, var, true_val) {
     s0 <- res_sum[which(res_sum$term == var),]
     
     s0 <- s0 |>
         simsum(estvarname = "estimate", se = "se", true = true_val, df = "df",
-               methodvar = "Analysis", ref = "Complete", 
+               methodvar = "method", ref = "complete", 
                by = c("set_n"), x = TRUE)
     
     smry_0 <- summary(s0)
@@ -33,18 +34,14 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
         map_df(ll,
                .f = function(sc) {
                    x1 <- readr::read_csv(file.path(in_dir, paste0(file_prefix, sc, file_suffix))) |>
-                       mutate(reg_relation = c("simple", "complex")[sc])
-                   
-                   x2 <- create_long_format_results(x1) |>
                        mutate(
-                           df = NA,
-                           se = NA
+                           set_n = sc
                        )
                    
-                   x3 <- x2 |>
-                       group_by(DGP, Analysis, term, reg_relation) |>
+                   x2 <- x1 |>
+                       group_by(set_n, method, term) |>
                        mutate(
-                           term = case_when(
+                           term2 = case_when(
                                term == "(Intercept)" ~ "intercept",
                                term == "intercept" ~ "intercept",
                                term == "beta_0" ~ "intercept",
@@ -56,7 +53,7 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
                            ),
                            df = case_when(
                                !is.na(df) ~ df,
-                               is.na(df) ~ N-6,
+                               is.na(df) ~ N-5,
                                TRUE ~ NA
                            ),
                            se = case_when(
@@ -72,28 +69,25 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
                                TRUE ~ 1
                            )
                        ) |>
-                       mutate(
-                           set_n = sc
-                       ) |>
                        ungroup() |>
                        select(
-                           Analysis, term, estimate, par_val, df, se, moe, cov, set_n, reg_relation
+                           method, term, estimate, par_val, df, se, moe, cov, set_n, fmi
                        ) |>
                        left_join(setting, by = "set_n")
                    
                })
     
     res_sum |>
-        group_by(set_n, DGP, Analysis, term) |>
+        group_by(set_n, name_DGP, method, term) |>
         summarize(
             n_sim = n()
         ) |> 
         filter(term == "intercept") |>
         print(n = 10)
     
-    dgp <- res_sum$DGP[1]
+    dgp <- res_sum$name_DGP[1]
     
-    f_out <- paste0(file_prefix, dgp)
+    f_out <- paste0(dgp, file_prefix)
     print(file.path(out_dir, f_out))
     # saveRDS(res_sum, file = file.path(out_dir, paste0(f_out, ".rds")))
     readr::write_csv(res_sum, file = file.path(out_dir, paste0(f_out, ".csv")))
@@ -111,12 +105,25 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
                 beta4 = beta4))
 }
 
+
+in_dir <- "Sim_Results/PN Reg"
+file_prefix <- "results-mi-sim-setting-"
+file_suffix <- ".csv"
+setting <- readRDS("sim_settings/pn-reg-setting.rds")
+ll <- 1:nrow(setting)
+
+res <- create_res_sum(ll = ll, in_dir = in_dir, file_prefix = file_prefix,
+                          file_suffix = file_suffix)
+
+lapply(res, function(betaj) {betaj$p_grid})
+
+
 # simsum still assumes that the same parameter values are used across the simulation settings ie reg-relations are the same
 
-in_dir <- "sim-results"
-file_prefix <- "sim-results-mar-mi-lm-sim-setting-"
+in_dir <- "Sim_Results/PN Bi modal"
+file_prefix <- "results-mi-sim-setting-"
 file_suffix <- ".csv"
-setting <- readRDS("sim_settings/test-setting.rds")
+setting <- readRDS("sim_settings/pn-bi-setting.rds")
 ll <- 1:nrow(setting)
 
 res <- create_res_sum(ll = ll, in_dir = in_dir, file_prefix = file_prefix,
