@@ -7,7 +7,7 @@ source("R/summary_tables.r")
 # setting <- readRDS("sim_settings/vm-reg-setting.rds")
 
 simsum_plots <- function(res_sum, var, true_val) {
-    s0 <- res_sum[which(res_sum$term == var),]
+    s0 <- res_sum[which(res_sum$term2 == var),]
     
     s0 <- s0 |>
         simsum(estvarname = "estimate", se = "se", true = true_val, df = "df",
@@ -39,6 +39,7 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
                        )
                    
                    x2 <- x1 |>
+                       left_join(setting, by = "set_n") |>
                        group_by(set_n, method, term) |>
                        mutate(
                            term2 = case_when(
@@ -53,14 +54,15 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
                            ),
                            df = case_when(
                                !is.na(df) ~ df,
-                               is.na(df) ~ N-5,
+                               is.na(df) ~ -5,
                                TRUE ~ NA
                            ),
                            se = case_when(
                                !is.na(se) ~ se,
-                               is.na(se) ~ moe / qt(0.975, df = df),
+                               # is.na(se) ~ moe / qt(0.975, df = df),
                                TRUE ~ NA
                            ),
+                           moe = qt(0.975, df) * se,
                            lb95 = estimate - moe,
                            ub95 = estimate + moe,
                            cov = case_when(
@@ -71,18 +73,19 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
                        ) |>
                        ungroup() |>
                        select(
-                           method, term, estimate, par_val, df, se, moe, cov, set_n, fmi
+                           method, term2, estimate, par_val, df, se, moe, cov, set_n, fmi
                        ) |>
                        left_join(setting, by = "set_n")
                    
                })
+    print(res_sum)
     
     res_sum |>
-        group_by(set_n, name_DGP, method, term) |>
+        group_by(set_n, name_DGP, method, term2) |>
         summarize(
             n_sim = n()
         ) |> 
-        filter(term == "intercept") |>
+        filter(term2 == "intercept") |>
         print(n = 10)
     
     dgp <- res_sum$name_DGP[1]
@@ -93,10 +96,10 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
     readr::write_csv(res_sum, file = file.path(out_dir, paste0(f_out, ".csv")))
     
     beta0 <- simsum_plots(res_sum, var = "intercept", true_val = 3)
-    beta1 <- simsum_plots(res_sum, var = "X1", true_val = 0)
+    beta1 <- simsum_plots(res_sum, var = "X1", true_val = -0.55)
     beta2 <- simsum_plots(res_sum, var = "X2", true_val = 0)
-    beta3 <- simsum_plots(res_sum, var = "Xc", true_val = 1)
-    beta4 <- simsum_plots(res_sum, var = "Xs", true_val = 0.5)
+    beta3 <- simsum_plots(res_sum, var = "U1", true_val = -0.2)
+    beta4 <- simsum_plots(res_sum, var = "U2", true_val = 0.3)
     
     return(list(beta0 = beta0,
                 beta1 = beta1,
@@ -106,27 +109,13 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
 }
 
 
-in_dir <- "Sim_Results/PN Reg"
-file_prefix <- "results-mi-sim-setting-"
+in_dir <- "sim-results"
+file_prefix <- "mar-pn-lc-mi-lm-sim_setting-"
 file_suffix <- ".csv"
-setting <- readRDS("sim_settings/pn-reg-setting.rds")
-ll <- 1:nrow(setting)
+setting <- readRDS("sim_settings/pn-lc-setting.rds")
+ll <- c(1:5, 8)
 
 res <- create_res_sum(ll = ll, in_dir = in_dir, file_prefix = file_prefix,
                           file_suffix = file_suffix)
-
-lapply(res, function(betaj) {betaj$p_grid})
-
-
-# simsum still assumes that the same parameter values are used across the simulation settings ie reg-relations are the same
-
-in_dir <- "Sim_Results/PN Bi modal"
-file_prefix <- "results-mi-sim-setting-"
-file_suffix <- ".csv"
-setting <- readRDS("sim_settings/pn-bi-setting.rds")
-ll <- 1:nrow(setting)
-
-res <- create_res_sum(ll = ll, in_dir = in_dir, file_prefix = file_prefix,
-                      file_suffix = file_suffix)
 
 lapply(res, function(betaj) {betaj$p_grid})
