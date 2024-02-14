@@ -84,11 +84,11 @@ x1 <- parallel::mclapply(1:N_sim,
 })
     
 
+saveRDS(x1, file = paste0(out_path, "/", "test-", "mi-lm-sim_setting-", set_n, ".rds"))
+
 results <- x1 |> dplyr::bind_rows()
 
 out_path <- file.path("sim-results")
-
-saveRDS(x1, file = paste0(out_path, "/", "test-", "mi-lm-sim_setting-", set_n, ".rds"))
 
 x2 <- x1 |> 
     dplyr::bind_rows()
