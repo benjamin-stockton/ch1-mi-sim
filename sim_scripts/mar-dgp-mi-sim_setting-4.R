@@ -31,7 +31,7 @@ miss_pars <- list(
     p_miss = 0.5
 ) # Missingness mechanism parameters (also controls MAR/MNAR)
 
-methods <- c("complete", "jav-pmm", "pmm", "jav-norm", "norm",
+methods <- c("complete", "cca", "jav-pmm", "pmm", "jav-norm", "norm",
             "bpnreg", "vmreg", "pnregid", "vmbrms", "pnreggen")
 
 # seeds <- matrix(NA, nrow = N_sim, ncol = 626)
@@ -84,11 +84,11 @@ x1 <- parallel::mclapply(1:N_sim,
 })
     
 
+out_path <- file.path("sim-results")
+
 saveRDS(x1, file = paste0(out_path, "/", "mar-dgp-", "mi-lm-sim_setting-", set_n, ".rds"))
 
 results <- x1 |> dplyr::bind_rows()
-
-out_path <- file.path("sim-results")
 
 x2 <- x1 |> 
     dplyr::bind_rows()

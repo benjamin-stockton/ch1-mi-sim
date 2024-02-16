@@ -11,16 +11,16 @@ source(file.path(file_path, "analysis.R"))
 source(file.path(file_path, "utils.R"))
 
 # From command line get the following arguments
-set_n <- 3 # simulation setting id number
+set_n <- 2 # simulation setting id number
 N_sim <- 250 # Number of simulation iterations
 N_sample <- 500 # Sample size
 init_seed <- 987 # Initial seed
-M <- 50 # Number of imputations
-name_DGP <- "PN Skewed"
+M <- 10 # Number of imputations
+name_DGP <- "PN Low Conc"
 pop_pars <- list(
-    mu_0 = c(4, 0),
+    mu_0 = c(1, 1),
     B_vec = c(-0.15, -0.35, -0.09, -0.40),
-    Sigma_vec = c(5, -2, -2, 1),
+    Sigma_vec = c(1, 1, 1, 1),
     kappa = 15,
     beta_y = c(-0.55, 0, -0.2, 0.3),
     sigma_y = 3.5
@@ -28,17 +28,18 @@ pop_pars <- list(
 miss_pars <- list(
     freq = c(1),
     mech = "MAR",
-    p_miss = 0.5
+    p_miss = 0.1
 ) # Missingness mechanism parameters (also controls MAR/MNAR)
 
-methods <- c("complete", "cca", "jav-pmm", "pmm", "jav-norm", "norm",
-            "bpnreg", "vmreg", "pnregid", "vmbrms", "pnreggen")
+# methods <- c("complete", "jav-pmm", "pmm", "jav-norm", "norm",
+#            "bpnreg", "vmreg", "pnregid", "vmbrms", "pnreggen")
+methods <- c("cca")
 
 # seeds <- matrix(NA, nrow = N_sim, ncol = 626)
 set.seed(init_seed * set_n)
 
 x1 <- parallel::mclapply(1:N_sim,
-                        mc.cores = 125,
+                        mc.cores = 25,
                         function(x) {
     print(x)
     
@@ -86,13 +87,13 @@ x1 <- parallel::mclapply(1:N_sim,
 
 out_path <- file.path("sim-results")
 
-saveRDS(x1, file = paste0(out_path, "/", "mar-dgp-", "mi-lm-sim_setting-", set_n, ".rds"))
+saveRDS(x1, file = paste0(out_path, "/", "mar-pn-lc-", "mi-lm-sim_setting-", set_n, "-cca.rds"))
 
 results <- x1 |> dplyr::bind_rows()
 
 x2 <- x1 |> 
     dplyr::bind_rows()
-f_out <- paste0(out_path, "/", "mar-dgp-", "mi-lm-sim_setting-", set_n, ".csv")
+f_out <- paste0(out_path, "/", "mar-pn-lc-", "mi-lm-sim_setting-", set_n, "-cca.csv")
 if (file.exists(f_out)) {
     readr::write_csv(x2, f_out, append = TRUE)
 } else {

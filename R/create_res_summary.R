@@ -12,7 +12,7 @@ simsum_plots <- function(res_sum, var, true_val) {
     s0 <- s0 |>
         simsum(estvarname = "estimate", se = "se", true = true_val, df = "df",
                methodvar = "method", ref = "complete", 
-               by = c("set_n"), x = TRUE)
+               by = c("N_sample", "p_miss"), x = TRUE)
     
     smry_0 <- summary(s0)
     
@@ -80,14 +80,24 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
                })
     print(res_sum)
     
+    r2 <- res_sum |>
+        group_by(set_n, name_DGP, method, term2) |>
+        summarize(
+            n_sim = n()
+        ) |> 
+        filter(term2 == "intercept") |>
+        print(n = 98)
+    n_sim_min <- min(r2$n_sim)
+    res_sum <- res_sum |>
+        group_by(set_n, method, term2) |>
+        slice_sample(n = n_sim_min)
     res_sum |>
         group_by(set_n, name_DGP, method, term2) |>
         summarize(
             n_sim = n()
         ) |> 
         filter(term2 == "intercept") |>
-        print(n = 10)
-    
+        print(n = 98)
     dgp <- res_sum$name_DGP[1]
     
     f_out <- paste0(dgp, file_prefix)
@@ -109,13 +119,4 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
 }
 
 
-in_dir <- "sim-results"
-file_prefix <- "mar-pn-lc-mi-lm-sim_setting-"
-file_suffix <- ".csv"
-setting <- readRDS("sim_settings/pn-lc-setting.rds")
-ll <- c(1:5, 8)
 
-res <- create_res_sum(ll = ll, in_dir = in_dir, file_prefix = file_prefix,
-                          file_suffix = file_suffix)
-
-lapply(res, function(betaj) {betaj$p_grid})
