@@ -41,7 +41,7 @@ sim7 <- lapply(sim7, function(d) {
     }) |> 
     dplyr::bind_rows()
 
-readr::write_csv(sim6, "sim-results/mar-pn-lc-mi-lm-sim_setting-7.csv")
+readr::write_csv(sim7, "sim-results/mar-pn-lc-mi-lm-sim_setting-7.csv")
 
 
 # PN Reg sim 7
@@ -63,7 +63,7 @@ sim7 <- lapply(sim7, function(d) {
 }) |> 
     dplyr::bind_rows()
 
-readr::write_csv(sim6, "sim-results/mar-pn-reg-mi-lm-sim_setting-7.csv")
+readr::write_csv(sim7, "sim-results/mar-pn-reg-mi-lm-sim_setting-7.csv")
 
 # PN lc sim 7
 
@@ -81,7 +81,9 @@ sim7 <- lapply(sim7, function(d) {
 }) |> 
     dplyr::bind_rows()
 
-readr::write_csv(sim6, "sim-results/mar-pn-lc-mi-lm-sim_setting-7-cca.csv")
+sim7$method
+
+readr::write_csv(sim7, "sim-results/mar-pn-lc-mi-lm-sim_setting-7-cca.csv")
 
 
 # PN Reg sim 7
@@ -100,5 +102,13 @@ sim7 <- lapply(sim7, function(d) {
 }) |> 
     dplyr::bind_rows()
 
-readr::write_csv(sim6, "sim-results/mar-pn-reg-mi-lm-sim_setting-7-cca.csv")
+readr::write_csv(sim7, "sim-results/mar-pn-reg-mi-lm-sim_setting-7-cca.csv")
 
+# DGP
+
+sim6_1 <- readr::read_csv("sim-results/mar-dgp-mi-lm-sim_setting-6-pt1.csv")
+sim6_2 <- readr::read_csv("sim-results/mar-dgp-mi-lm-sim_setting-6-pt2.csv")
+
+sim6 <- dplyr::bind_rows(sim6_1, sim6_2)
+
+readr::write_csv(sim6, "sim-results/mar-dgp-mi-lm-sim_setting-6.csv")

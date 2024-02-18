@@ -2,21 +2,22 @@ library(purrr)
 library(dplyr)
 library(ggplot2)
 library(rsimsum)
-source("R/summary_tables.r")
 
 # setting <- readRDS("sim_settings/vm-reg-setting.rds")
 
-simsum_plots <- function(res_sum, var, true_val) {
+simsum_plots <- function(res_sum, var, true_val, by = c("N_sample", "p_miss")) {
     s0 <- res_sum[which(res_sum$term2 == var),]
     
     s0 <- s0 |>
         simsum(estvarname = "estimate", se = "se", true = true_val, df = "df",
                methodvar = "method", ref = "complete", 
-               by = c("N_sample", "p_miss"), x = TRUE)
+               by = by, x = TRUE)
     
     smry_0 <- summary(s0)
     
     p0 <- autoplot(s0, type = "est_ridge")
+    p0 <- p0 + 
+        coord_cartesian(xlim = c(-5, 5))
     p1 <- autoplot(smry_0, type = "lolly", "bias")
     p2 <- autoplot(smry_0, type = "lolly", "cover")
     p3 <- autoplot(smry_0, type = "lolly", "becover")
@@ -29,7 +30,7 @@ simsum_plots <- function(res_sum, var, true_val) {
                 p_grid = p4))
 }
 
-create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", file_suffix = ".csv", in_dir = "sim-results", out_dir = "sim-summary") {
+create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", file_suffix = ".csv", in_dir = "sim-results", out_dir = "sim-summary", by = c("N_sample", "p_miss")) {
     res_sum <-
         map_df(ll,
                .f = function(sc) {
@@ -97,7 +98,7 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
             n_sim = n()
         ) |> 
         filter(term2 == "intercept") |>
-        print(n = 98)
+        print(n = 99)
     dgp <- res_sum$name_DGP[1]
     
     f_out <- paste0(dgp, file_prefix)
@@ -105,11 +106,11 @@ create_res_sum <- function(ll, load_rds = FALSE, file_prefix = "sim-results_", f
     # saveRDS(res_sum, file = file.path(out_dir, paste0(f_out, ".rds")))
     readr::write_csv(res_sum, file = file.path(out_dir, paste0(f_out, ".csv")))
     
-    beta0 <- simsum_plots(res_sum, var = "intercept", true_val = 3)
-    beta1 <- simsum_plots(res_sum, var = "X1", true_val = -0.55)
-    beta2 <- simsum_plots(res_sum, var = "X2", true_val = 0)
-    beta3 <- simsum_plots(res_sum, var = "U1", true_val = -0.2)
-    beta4 <- simsum_plots(res_sum, var = "U2", true_val = 0.3)
+    beta0 <- simsum_plots(res_sum, var = "intercept", true_val = 3, by = by)
+    beta1 <- simsum_plots(res_sum, var = "X1", true_val = -0.55, by = by)
+    beta2 <- simsum_plots(res_sum, var = "X2", true_val = 0, by = by)
+    beta3 <- simsum_plots(res_sum, var = "U1", true_val = -0.2, by = by)
+    beta4 <- simsum_plots(res_sum, var = "U2", true_val = 0.3, by = by)
     
     return(list(beta0 = beta0,
                 beta1 = beta1,
