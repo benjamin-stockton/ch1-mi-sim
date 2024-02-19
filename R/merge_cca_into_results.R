@@ -6,7 +6,7 @@ file_prefix <- "mar-pn-lc-mi-lm-sim_setting-"
 file_suffix <- ".csv"
 cca_suffix <- "-cca.csv"
 
-ll <- c(6,7)
+ll <- c(1:9)
 
 lapply(ll, function(i) {
     d1 <- read_csv(paste0(in_dir, "/", file_prefix, i, file_suffix))
